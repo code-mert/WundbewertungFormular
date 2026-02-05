@@ -1,4 +1,4 @@
-export type QuestionType = 'dropdown' | 'slider' | 'text' | 'checkbox';
+export type QuestionType = 'dropdown' | 'slider' | 'text' | 'checkbox' | 'info' | 'multiselect';
 
 export interface Question {
     id: string;
@@ -15,8 +15,8 @@ export interface Question {
 export const questions: Question[] = [
     {
         id: 'beschreibung',
-        type: 'text',
-        label: 'Beschreibung der Wundsituation (Wundart, Wundzustand, Exsudation, Beläge, Infektionszeichen, Wundumgebung)'
+        type: 'info',
+        label: 'Beschreibung der Wundsituation\nBitte beschreiben Sie Wundart, Wundzustand, Exsudation, Beläge, mögliche Infektionszeichen sowie die Wundumgebung.'
     },
     {
         id: 'wundtyp',
@@ -57,5 +57,67 @@ export const questions: Question[] = [
         id: 'auffaelligkeiten',
         type: 'text',
         label: 'Weitere Auffälligkeiten oder Besonderheiten'
+    },
+    {
+        id: 'debridement',
+        type: 'dropdown',
+        label: 'Wundbettvorbereitung/ Debridement',
+        options: [
+            'Debrisoft Pad',
+            'Debrisoft Duo',
+            'Debrisoft Lolly',
+            'Keine Wundvorbereitung erforderlich',
+            'Chirurgisches Debridement',
+            'Autolytisches Debridement',
+            'Ultraschall',
+            'Sonstiges'
+        ]
+    },
+    {
+        id: 'infektion',
+        type: 'dropdown',
+        label: 'Besteht eine Infektion der Wunde?',
+        options: ['Ja', 'Nein']
+    },
+    {
+        id: 'spuelloesung',
+        type: 'dropdown',
+        label: 'Welche Spüllösung soll verwendet werden?',
+        options: ['Neutrale Spüllösung', 'Antimikrobielle Spüllösung']
+    },
+    {
+        id: 'wundauflagen_info',
+        type: 'info',
+        label: 'Wundauflagen - Präferierte & Alternative Lösung\nBitte wählen Sie eine aus Ihrer Sicht geeignete primäre Wundauflage basierend auf dem sichtbaren Wundzustand. Die alternative Lösung ist als gleichwertige therapeutische Option zu verstehen.'
+    },
+    {
+        id: 'praeferenz_produkt',
+        type: 'multiselect',
+        label: 'Präferierte Lösung (Mehrfachauswahl möglich)',
+        options: [
+            'Suprasorb A Pro', 'Suprasorb A + Ag', 'Suprasorb F', 'Suprasorb F Protect',
+            'Suprasorb G Gel-Kompresse', 'Suprasorb H', 'Suprasorb Liquacel Pro',
+            'Suprasorb P', 'Suprasorb P sensitive', 'Suprasorb P Sensiflex', 'Suprasorb P + PHMB',
+            'Suprasorb X', 'Suprasorb X + PHMB', 'Lomatuell Pro', 'Lomatuell H',
+            'Vliwasorb Pro', 'Vliwasorb sensitive', 'Vliwasorb adhesive', 'Vliwazell Pro',
+            'Vliwazell', 'Vliwaktiv', 'Vliwaktiv Ag', 'Solvaline N', 'Metalline Kompressen',
+            'Metalline', 'amorphes Gel', 'Suprasorb CNP', 'Gazin', 'Vliwasoft', 'Zemuko',
+            'Opraclean', 'Sonstiges'
+        ]
+    },
+    {
+        id: 'alternative_produkt',
+        type: 'multiselect',
+        label: 'Alternative Lösung (Mehrfachauswahl möglich)',
+        options: [
+            'Suprasorb A Pro', 'Suprasorb A + Ag', 'Suprasorb F', 'Suprasorb F Protect',
+            'Suprasorb G Gel-Kompresse', 'Suprasorb H', 'Suprasorb Liquacel Pro',
+            'Suprasorb P', 'Suprasorb P sensitive', 'Suprasorb P Sensiflex', 'Suprasorb P + PHMB',
+            'Suprasorb X', 'Suprasorb X + PHMB', 'Lomatuell Pro', 'Lomatuell H',
+            'Vliwasorb Pro', 'Vliwasorb sensitive', 'Vliwasorb adhesive', 'Vliwazell Pro',
+            'Vliwazell', 'Vliwaktiv', 'Vliwaktiv Ag', 'Solvaline N', 'Metalline Kompressen',
+            'Metalline', 'amorphes Gel', 'Suprasorb CNP', 'Gazin', 'Vliwasoft', 'Zemuko',
+            'Opraclean', 'Sonstiges'
+        ]
     }
 ];

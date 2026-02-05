@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { ImageViewer } from './components/ImageViewer';
 import { QuestionForm } from './components/QuestionForm';
 import { useStore } from './hooks/useStore';
+import { getDescription } from './lib/descriptions';
 import { FaUserMd, FaDownload } from 'react-icons/fa';
 
 function App() {
@@ -91,7 +92,10 @@ function App() {
       rightPanel={
         <div className="pb-24">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
-            <h2 className="text-lg font-bold text-slate-800">Analyse Formular</h2>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">Bild {currentImage.id.replace('wunde_', '')}</h2>
+              <p className="text-slate-600 text-sm">{getDescription(currentImage.id)}</p>
+            </div>
             <div className="flex gap-2">
               <button onClick={exportData} title="Daten Exportieren" className="p-2 text-slate-400 hover:text-blue-600 transition">
                 <FaDownload />

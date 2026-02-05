@@ -1,6 +1,7 @@
 import { questions } from '../lib/questions';
 import { DropdownInput } from './inputs/DropdownInput';
 import { SliderInput } from './inputs/SliderInput';
+import { MultiSelectInput } from './inputs/MultiSelectInput';
 import { TextInput } from './inputs/TextInput';
 
 interface Props {
@@ -14,13 +15,41 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
             {questions.map((q) => {
                 const value = answers[q.id];
 
+                // Conditional Logic: Hide 'spuelloesung' if 'infektion' is not 'Ja'
+                if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') {
+                    return null;
+                }
+
                 return (
                     <div key={q.id} className="p-4 bg-white rounded-lg shadow-sm border border-slate-100">
                         {q.type === 'dropdown' && (
-                            <DropdownInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
+                            <>
+                                <DropdownInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
+                                {value === 'Sonstiges' && (
+                                    <div className="mt-2 ml-4">
+                                        <label className="text-sm text-slate-600 block mb-1">Bitte spezifizieren:</label>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-slate-300 rounded p-2 text-sm"
+                                            value={answers[`${q.id}_sonstiges`] || ''}
+                                            onChange={(e) => onAnswerChange(`${q.id}_sonstiges`, e.target.value)}
+                                            placeholder="Beschreibung..."
+                                        />
+                                    </div>
+                                )}
+                            </>
                         )}
                         {q.type === 'slider' && (
                             <SliderInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
+                        )}
+                        {q.type === 'info' && (
+                            <div className="prose prose-slate">
+                                <h3 className="font-bold text-lg text-slate-800 mb-1">{q.label.split('\n')[0]}</h3>
+                                <p className="text-slate-600 italic text-sm">{q.label.split('\n')[1]}</p>
+                            </div>
+                        )}
+                        {q.type === 'multiselect' && (
+                            <MultiSelectInput question={q} value={value || []} onChange={(v) => onAnswerChange(q.id, v)} />
                         )}
                         {q.type === 'text' && (
                             <TextInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
