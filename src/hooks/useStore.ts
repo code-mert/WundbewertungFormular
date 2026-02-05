@@ -9,7 +9,7 @@ const IMAGES = Array.from({ length: TOTAL_IMAGES }, (_, i) => {
     const num = String(i + 1).padStart(2, '0');
     return {
         id: `wunde_${num}`,
-        url: `/images/wunde_${num}.jpg` // Correct path for public folder
+        url: `${import.meta.env.BASE_URL}images/wunde_${num}.jpg` // Correct path for public folder with base
     };
 });
 
