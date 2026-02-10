@@ -191,6 +191,6 @@ export const questions: Question[] = [
     {
         id: 'einschraenkungen',
         type: 'text',
-        label: 'Einschränkungen, Annahmen oder fehlende Informationen\nBitte geben Sie an, welche Informationen für eine sichere Entscheidung gefehlt haben oder welche Annahmen getroffen wurden.'
+        label: '**Einschränkungen, Annahmen oder fehlende Informationen***Bitte geben Sie an, welche Informationen für eine sichere Entscheidung gefehlt haben oder welche Annahmen getroffen wurden.*'
     }
 ];
