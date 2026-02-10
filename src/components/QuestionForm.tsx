@@ -20,6 +20,10 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
                     return null;
                 }
 
+                if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') {
+                    return null;
+                }
+
                 return (
                     <div key={q.id} className="p-4 bg-white rounded-lg shadow-sm border border-slate-100">
                         {q.type === 'dropdown' && (
@@ -44,8 +48,8 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
                         )}
                         {q.type === 'info' && (
                             <div className="prose prose-slate">
-                                <h3 className="font-bold text-lg text-slate-800 mb-1">{q.label.split('\n')[0]}</h3>
-                                <p className="text-slate-600 italic text-sm">{q.label.split('\n')[1]}</p>
+                                <h3 className="font-bold text-xl text-slate-800 mb-2">{q.label.split('\n')[0]}</h3>
+                                <p className="text-slate-600 italic text-base">{q.label.split('\n')[1]}</p>
                             </div>
                         )}
                         {q.type === 'multiselect' && (

@@ -17,7 +17,7 @@ export function Header({ expertId, currentImageIndex, totalImages, imageId }: Pr
 
             <div className="flex-1 max-w-2xl mx-auto px-4 flex flex-col gap-1">
                 <div className="flex justify-between text-xs text-slate-500 font-medium upppercase tracking-wider">
-                    <span>Bild {currentImageIndex + 1} von {totalImages}</span>
+                    <span>Wunde {currentImageIndex + 1} von {totalImages}</span>
                     <span>ID: {imageId}</span>
                 </div>
                 <ProgressBar total={totalImages} current={currentImageIndex} />

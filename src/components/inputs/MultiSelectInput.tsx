@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Question } from '../../lib/questions';
 import { FaTimes, FaSearch } from 'react-icons/fa';
+import { FormattedLabel } from '../FormattedLabel';
 
 interface Props {
     question: Question;
@@ -31,12 +32,12 @@ export function MultiSelectInput({ question, value = [], onChange }: Props) {
 
     return (
         <div className="mb-4">
-            <label className="text-sm font-medium text-slate-700 block mb-2">{question.label}</label>
+            <label className="text-base font-medium text-slate-700 block mb-2 whitespace-pre-wrap"><FormattedLabel text={question.label} /></label>
 
             {/* Selected Tags */}
             <div className="flex flex-wrap gap-2 mb-3">
                 {value.map(opt => (
-                    <span key={opt} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                    <span key={opt} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base flex items-center gap-2">
                         {opt}
                         <button onClick={() => removeOption(opt)} className="hover:text-blue-900 focus:outline-none">
                             <FaTimes size={12} />
@@ -54,7 +55,7 @@ export function MultiSelectInput({ question, value = [], onChange }: Props) {
                     <input
                         type="text"
                         className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition"
-                        placeholder="Produkt suchen..."
+                        placeholder={question.placeholder || "Produkt suchen..."}
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
                         onFocus={() => setIsOpen(true)}

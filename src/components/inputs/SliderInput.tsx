@@ -1,4 +1,5 @@
 import type { Question } from '../../lib/questions';
+import { FormattedLabel } from '../FormattedLabel';
 
 interface Props {
     question: Question;
@@ -12,7 +13,7 @@ export function SliderInput({ question, value, onChange }: Props) {
     return (
         <div className="flex flex-col gap-2 mb-6">
             <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-slate-700">{question.label}</label>
+                <label className="text-sm font-medium text-slate-700"><FormattedLabel text={question.label} /></label>
                 <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
                     {val} {question.unit}
                 </span>

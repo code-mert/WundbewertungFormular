@@ -1,4 +1,5 @@
 import type { Question } from '../../lib/questions';
+import { FormattedLabel } from '../FormattedLabel';
 
 interface Props {
     question: Question;
@@ -9,9 +10,9 @@ interface Props {
 export function DropdownInput({ question, value, onChange }: Props) {
     return (
         <div className="flex flex-col gap-1 mb-4">
-            <label className="text-sm font-medium text-slate-700">{question.label}</label>
+            <label className="text-base font-medium text-slate-700 whitespace-pre-wrap"><FormattedLabel text={question.label} /></label>
             <select
-                className="form-select block w-full mt-1 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2 border"
+                className="form-select block w-full mt-1 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-3 text-base border"
                 value={value || ''}
                 onChange={(e) => onChange(e.target.value)}
             >

@@ -93,8 +93,8 @@ function App() {
         <div className="pb-24">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Bild {currentImage.id.replace('wunde_', '')}</h2>
-              <p className="text-slate-600 text-sm">{getDescription(currentImage.id)}</p>
+              <h2 className="text-lg font-bold text-slate-800">Wunde {currentImage.id.replace('wunde_', '')}</h2>
+              <p className="text-slate-600 text-lg">{getDescription(currentImage.id)}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={exportData} title="Daten Exportieren" className="p-2 text-slate-400 hover:text-blue-600 transition">
@@ -108,7 +108,7 @@ function App() {
             onAnswerChange={setAnswer}
           />
 
-          <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between fixed bottom-0 right-0 w-1/2 lg:w-[40%] z-20">
+          <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between fixed bottom-0 right-0 w-1/2 z-20">
             <button
               onClick={prevImage}
               disabled={state.currentImageIndex === 0}

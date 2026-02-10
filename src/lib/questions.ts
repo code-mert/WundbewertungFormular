@@ -21,42 +21,63 @@ export const questions: Question[] = [
     {
         id: 'wundtyp',
         type: 'text',
-        label: 'Wundtyp (z. B. Dekubitus, Ulcus cruris, diabetisches Fußulkus, postoperative Wunde)'
+        label: 'Wundtyp\n*(z. B. Dekubitus, Ulcus cruris, diabetisches Fußulkus, postoperative Wunde)*'
     },
     {
         id: 'lokalisation',
         type: 'text',
-        label: 'Lokalisation (Körperregion & Seitenangabe)'
+        label: 'Lokalisation\n*(Körperregion & Seitenangabe)*'
     },
     {
         id: 'wundstadium',
-        type: 'text',
-        label: 'Wundstadium (nach EPUAP)'
+        type: 'multiselect',
+        label: 'Wundstadium',
+        options: [
+            'Exsudation',
+            'Nekrose',
+            'Fibrinbelag',
+            'Granulation',
+            'Epithelisierung',
+            'Infektion',
+            'Sonstiges'
+        ],
+        placeholder: 'Zustand auswählen...'
     },
     {
         id: 'wundgrund',
         type: 'text',
-        label: 'Wundgrund (Beschreibung des sichtbaren Gewebes)'
+        label: 'Wundgrund\n*(Beschreibung des sichtbaren Gewebes)*'
     },
     {
         id: 'wundrand',
         type: 'text',
-        label: 'Wundrand (z. B. glatt, mazeriert, unterminiert, gerötet)'
+        label: 'Wundrand\n*(z. B. glatt, mazeriert, unterminiert, gerötet)*'
     },
     {
         id: 'wundumgebung',
         type: 'text',
-        label: 'Wundumgebung (z. B. Rötung, Mazeration, Ödem, Ekzem, Infekt)'
+        label: 'Wundumgebung\n*(z. B. Rötung, Mazeration, Ödem, Ekzem, Infekt)*'
     },
     {
         id: 'exsudat',
         type: 'text',
-        label: 'Exsudat (Menge und Erscheinung)'
+        label: 'Exsudat\n*(Menge und Erscheinung)*'
     },
     {
         id: 'auffaelligkeiten',
         type: 'text',
         label: 'Weitere Auffälligkeiten oder Besonderheiten'
+    },
+    {
+        id: 'debridement_info',
+        type: 'info',
+        label: 'Wundbettvorbereitung/ Debridement'
+    },
+    {
+        id: 'debridement_notwendig',
+        type: 'dropdown',
+        label: 'Ist eine Wundbettvorbereitung/ Debridement notwendig?',
+        options: ['Ja', 'Nein']
     },
     {
         id: 'debridement',
@@ -119,5 +140,57 @@ export const questions: Question[] = [
             'Metalline', 'amorphes Gel', 'Suprasorb CNP', 'Gazin', 'Vliwasoft', 'Zemuko',
             'Opraclean', 'Sonstiges'
         ]
+    },
+    {
+        id: 'ergaenzende_produkte_info',
+        type: 'info',
+        label: 'Ergänzende Produkte - Präferierte & Alternative Lösung\nBitte wählen Sie geeignete ergänzende Produkte (z.B. zur Fixierung) für die Versorgung.'
+    },
+    {
+        id: 'ergaenzende_produkte_praeferenz',
+        type: 'multiselect',
+        label: 'Präferierte Lösung (Mehrfachauswahl möglich)',
+        options: [
+            'Curapor', 'Curapor transparent', 'Curafix', 'Curaplast sensitive Wundschnellverband', 'Curaplast sensitive Injektionspflaster', 'Curaplast sensitive Pflasterstrips', 'Curaplast Fingerverband', 'Curaplast wasserfest Pflasterstrips',
+            'Curaplast Kids', 'Curafix H', 'Silkafix', 'Porofix', 'Sonstiges'
+        ]
+    },
+    {
+        id: 'ergaenzende_produkte_alternativ',
+        type: 'multiselect',
+        label: 'Alternative Lösung (Mehrfachauswahl möglich)',
+        options: [
+            'Curapor', 'Curapor transparent', 'Curafix', 'Curaplast sensitive Wundschnellverband', 'Curaplast sensitive Injektionspflaster', 'Curaplast sensitive Pflasterstrips', 'Curaplast Fingerverband', 'Curaplast wasserfest Pflasterstrips',
+            'Curaplast Kids', 'Curafix H', 'Silkafix', 'Porofix', 'Sonstiges'
+        ]
+    },
+    {
+        id: 'kompression_info',
+        type: 'info',
+        label: 'Kompressionstherapie'
+    },
+    {
+        id: 'kompression_indiziert',
+        type: 'dropdown',
+        label: 'Ist eine Kompressionstherapie indiziert?',
+        options: ['Ja', 'Nein', 'Nicht beurteilbar']
+    },
+    {
+        id: 'kompression_produkte',
+        type: 'multiselect',
+        label: 'Wählen Sie die benötigten Produkte für eine Kompressionstherapie',
+        options: [
+            'ReadyWrap Obere Extremität', 'ReadyWrap Untere Extremität', 'ReadyWrap Zubehör', 'Actico UlcerSys System', 'Actico UlcerSys Unterstrumpf',
+            'Venosan AES', 'Rosidal 1C', 'Rosidal K', 'Rosidal CC', 'Rosidal SC', 'Rosidal haft', 'Durelast', 'Lenkideal', 'Idealbinde',
+            'Rosidal TCS', 'Rosidal sys', 'Rosidal Lymph', 'Panelast', 'Porelast', 'Varicex S', 'Dauerbinde K', 'Dauerbinde F',
+            'Rosidal soft', 'Cellona Synthetikwatte', 'Komprex I/II', 'ActiFast', 'tg Schlauchverband', 'tg soft', 'tg grip',
+            'Mollelast', 'Geka Mullbinde', 'Mollelast haft latexfrei', 'Haftelast latexfrei', 'tg Fertigverbände',
+            'Lenkelast', 'Lenkelast color', 'Haftelast', 'Sonstiges'
+        ]
+    },
+    {
+        id: 'einschraenkungen',
+        type: 'text',
+        label: 'Einschränkungen, Annahmen oder fehlende Informationen\nBitte geben Sie an, welche Informationen für eine sichere Entscheidung gefehlt haben oder welche Annahmen getroffen wurden.'
     }
 ];

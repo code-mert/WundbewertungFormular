@@ -108,7 +108,7 @@ export function useStore() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
             // Handle finish
-            alert("Alle Bilder bearbeitet! Danke.");
+            alert("Alle Wunden bearbeitet! Danke.");
         }
     };
 
