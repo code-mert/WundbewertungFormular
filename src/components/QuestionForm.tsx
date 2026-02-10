@@ -27,21 +27,7 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
                 return (
                     <div key={q.id} className="p-4 bg-white rounded-lg shadow-sm border border-slate-100">
                         {q.type === 'dropdown' && (
-                            <>
-                                <DropdownInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
-                                {value === 'Sonstiges' && (
-                                    <div className="mt-2 ml-4">
-                                        <label className="text-sm text-slate-600 block mb-1">Bitte spezifizieren:</label>
-                                        <input
-                                            type="text"
-                                            className="w-full border border-slate-300 rounded p-2 text-sm"
-                                            value={answers[`${q.id}_sonstiges`] || ''}
-                                            onChange={(e) => onAnswerChange(`${q.id}_sonstiges`, e.target.value)}
-                                            placeholder="Beschreibung..."
-                                        />
-                                    </div>
-                                )}
-                            </>
+                            <DropdownInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
                         )}
                         {q.type === 'slider' && (
                             <SliderInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
