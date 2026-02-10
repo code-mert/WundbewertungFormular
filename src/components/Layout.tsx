@@ -19,7 +19,7 @@ export function Layout({ header, leftPanel, rightPanel }: Props) {
 
                 {/* Right Panel: Form (Scrollable) */}
                 <section className="w-1/2 h-full overflow-y-auto bg-white">
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-4xl mx-auto">
                         {rightPanel}
                     </div>
                 </section>
