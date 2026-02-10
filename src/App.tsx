@@ -93,7 +93,7 @@ function App() {
         <div className="pb-24">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Wunde {currentImage.id.replace('wunde_', '')}</h2>
+              <h2 className="text-lg font-bold text-slate-800">Wunde {state.currentImageIndex + 1}</h2>
               <p className="text-slate-600 text-lg">{getDescription(currentImage.id)}</p>
             </div>
             <div className="flex gap-2">

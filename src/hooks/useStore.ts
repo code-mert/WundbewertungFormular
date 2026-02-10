@@ -17,13 +17,14 @@ export interface AppState {
     expertId: string;
     currentImageIndex: number;
     answers: Record<string, Record<string, any>>;
-    // answers: { [imageId]: { [questionId]: value } }
+    imageSequence: string[]; // History of visited image IDs
 }
 
 const INITIAL_STATE: AppState = {
     expertId: '',
     currentImageIndex: 0,
     answers: {},
+    imageSequence: [],
 };
 
 export function useStore() {
@@ -36,10 +37,24 @@ export function useStore() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
-                setState(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                // Ensure imageSequence exists (migration for existing users)
+                if (!parsed.imageSequence || parsed.imageSequence.length === 0) {
+                    const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
+                    parsed.imageSequence = [randomId];
+                    parsed.currentImageIndex = 0;
+                }
+                setState(parsed);
             } catch (e) {
                 console.error("Failed to parse local storage", e);
+                // Fallback init if parse fails
+                const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
+                setState({ ...INITIAL_STATE, imageSequence: [randomId] });
             }
+        } else {
+            // First time load
+            const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
+            setState({ ...INITIAL_STATE, imageSequence: [randomId] });
         }
         setIsLoaded(true);
     }, []);
@@ -55,8 +70,11 @@ export function useStore() {
         setState(prev => ({ ...prev, expertId: id }));
     };
 
+    const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id;
+    // Find image object by ID
+    const currentImage = IMAGES.find(img => img.id === currentImageId) || IMAGES[0];
+
     const setAnswer = (questionId: string, value: any) => {
-        const currentImageId = IMAGES[state.currentImageIndex].id;
         setState(prev => ({
             ...prev,
             answers: {
@@ -69,9 +87,8 @@ export function useStore() {
         }));
     };
 
-    const currentImage = IMAGES[state.currentImageIndex];
-    const currentAnswers = state.answers[currentImage.id] || {};
-    const isLastImage = state.currentImageIndex === TOTAL_IMAGES - 1;
+    const currentAnswers = state.answers[currentImageId] || {};
+    const isLastImage = state.imageSequence.length >= TOTAL_IMAGES && state.currentImageIndex === TOTAL_IMAGES - 1;
 
     const nextImage = async () => {
         if (!state.expertId) {
@@ -85,7 +102,7 @@ export function useStore() {
         try {
             const payload = {
                 expert_id: state.expertId,
-                image_id: currentImage.id,
+                image_id: currentImageId,
                 data: currentAnswers,
                 completed_at: new Date().toISOString(),
             };
@@ -95,7 +112,6 @@ export function useStore() {
             if (error) {
                 console.error('Supabase sync error:', error);
                 alert('Fehler beim Speichern in die Datenbank. Daten wurden nur lokal gespeichert.');
-                // We persist anyway locally, so we can retry or export later.
             }
         } catch (err) {
             console.error('Sync failed', err);
@@ -103,13 +119,36 @@ export function useStore() {
             setIsSyncing(false);
         }
 
-        if (!isLastImage) {
-            setState(prev => ({ ...prev, currentImageIndex: prev.currentImageIndex + 1 }));
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            // Handle finish
-            alert("Alle Wunden bearbeitet! Danke.");
-        }
+        // Logic for next image
+        setState(prev => {
+            // If we are navigating history (not at the end)
+            if (prev.currentImageIndex < prev.imageSequence.length - 1) {
+                return { ...prev, currentImageIndex: prev.currentImageIndex + 1 };
+            }
+
+            // We are at the end, pick a NEW random image
+            // 1. Get all used IDs
+            const usedIds = new Set(prev.imageSequence);
+            // 2. Find available IDs
+            const available = IMAGES.filter(img => !usedIds.has(img.id));
+
+            if (available.length === 0) {
+                // Should be caught by isLastImage check before calling next, but handled here
+                alert("Alle Wunden bearbeitet! Danke.");
+                return prev;
+            }
+
+            // 3. Pick random
+            const randomImg = available[Math.floor(Math.random() * available.length)];
+
+            return {
+                ...prev,
+                imageSequence: [...prev.imageSequence, randomImg.id],
+                currentImageIndex: prev.currentImageIndex + 1
+            };
+        });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const prevImage = () => {
