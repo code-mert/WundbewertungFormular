@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { questions } from '../lib/questions';
 
 const TOTAL_IMAGES = 60;
-const STORAGE_KEY = 'ground_truth_state';
+
 
 // Generate image list: wunde_01.jpg ... wunde_60.jpg
 const IMAGES = Array.from({ length: TOTAL_IMAGES }, (_, i) => {
@@ -166,9 +166,7 @@ export function useStore() {
         initUserSession();
     }, [session?.user?.id]);
 
-    const setExpertId = (id: string) => {
-        // Deprecated
-    };
+
 
     const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id; // Fallback only if sequence empty
     // Find image object by ID
@@ -343,8 +341,8 @@ export function useStore() {
 
     return {
         state,
-        setExpertId,
         setAnswer,
+
         nextImage,
         prevImage,
         skipImage,
