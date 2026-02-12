@@ -81,8 +81,8 @@ export const questions: Question[] = [
     },
     {
         id: 'debridement',
-        type: 'dropdown',
-        label: 'Wundbettvorbereitung/ Debridement',
+        type: 'multiselect',
+        label: 'Wundbettvorbereitung/ Debridement (Mehrfachauswahl möglich)',
         options: [
             'Debrisoft Pad',
             'Debrisoft Duo',

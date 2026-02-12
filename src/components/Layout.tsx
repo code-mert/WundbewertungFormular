@@ -4,12 +4,14 @@ interface Props {
     header: ReactNode;
     leftPanel: ReactNode;
     rightPanel: ReactNode;
+    dashboard: ReactNode;
 }
 
-export function Layout({ header, leftPanel, rightPanel }: Props) {
+export function Layout({ header, leftPanel, rightPanel, dashboard }: Props) {
     return (
-        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative">
             {header}
+            {dashboard}
 
             <main className="flex-1 flex overflow-hidden pt-16">
                 {/* Left Panel: Image (Fixed) */}

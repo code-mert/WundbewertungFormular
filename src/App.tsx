@@ -1,89 +1,66 @@
 import { useEffect, useState } from 'react';
 import { Layout } from './components/Layout';
+import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
 import { ImageViewer } from './components/ImageViewer';
 import { QuestionForm } from './components/QuestionForm';
+import { Auth } from './components/Auth';
 import { useStore } from './hooks/useStore';
 import { getDescription } from './lib/descriptions';
-import { FaUserMd, FaDownload } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
 
 function App() {
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+
   const {
     state,
     setExpertId,
     setAnswer,
     nextImage,
     prevImage,
+    skipImage,
+    jumpToImage,
     currentImage,
     currentAnswers,
     isLastImage,
     isSyncing,
     exportData,
     isLoaded,
-    TRAINING_IMAGES
+    TRAINING_IMAGES,
+    session,
+    signOut
   } = useStore();
-
-  const [tempExpertId, setTempExpertId] = useState('');
-
-  // Safety Warning
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Check if session is active (expertId set) and not complete
-      if (state.expertId) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [state.expertId]);
 
   if (!isLoaded) return <div className="flex h-screen items-center justify-center">Laden...</div>;
 
   // Login Screen
-  if (!state.expertId) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
-            <FaUserMd />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Ground Truth Builder</h1>
-          <p className="text-slate-500 mb-8">Bitte geben Sie Ihre Experten-ID ein, um die Wundanalyse zu starten.</p>
-
-          <form onSubmit={(e) => { e.preventDefault(); if (tempExpertId.trim()) setExpertId(tempExpertId.trim()); }}>
-            <input
-              type="text"
-              placeholder="z.B. Experte_Mert"
-              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none mb-4"
-              value={tempExpertId}
-              onChange={(e) => setTempExpertId(e.target.value)}
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!tempExpertId.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all"
-            >
-              Session Starten
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+  if (!session) {
+    return <Auth />;
   }
-
-  // Completion Screen (Optional, can be added if index >= total, currently logic just alerts)
-  // For now, nextImage alerts on finish. We can add a specialized view here if needed.
 
   return (
     <Layout
       header={
         <Header
-          expertId={state.expertId}
+          expertId={session?.user?.email || 'Experte'}
           currentImageIndex={state.currentImageIndex}
           totalImages={TRAINING_IMAGES.length}
           imageId={currentImage.id}
+          onLogout={signOut}
+          onMenuClick={() => setIsDashboardOpen(true)}
+        />
+      }
+      dashboard={
+        <Dashboard
+          totalImages={TRAINING_IMAGES.length}
+          currentImageIndex={state.currentImageIndex}
+          completedImages={state.completedImages}
+          imageSequence={state.imageSequence}
+          onJump={(index) => {
+            jumpToImage(index);
+          }}
+          isOpen={isDashboardOpen}
+          onToggle={() => setIsDashboardOpen(!isDashboardOpen)}
         />
       }
       leftPanel={
@@ -97,6 +74,12 @@ function App() {
               <p className="text-slate-600 text-lg">{getDescription(currentImage.id)}</p>
             </div>
             <div className="flex gap-2">
+              <button
+                onClick={skipImage}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded border border-slate-300 transition"
+              >
+                Überspringen
+              </button>
               <button onClick={exportData} title="Daten Exportieren" className="p-2 text-slate-400 hover:text-blue-600 transition">
                 <FaDownload />
               </button>

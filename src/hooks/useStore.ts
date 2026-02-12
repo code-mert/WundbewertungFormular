@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { questions } from '../lib/questions';
 
 const TOTAL_IMAGES = 60;
 const STORAGE_KEY = 'ground_truth_state';
@@ -13,66 +14,208 @@ const IMAGES = Array.from({ length: TOTAL_IMAGES }, (_, i) => {
     };
 });
 
+// Simple seeded random number generator
+function seededRandom(seed: number) {
+    const m = 0x80000000;
+    const a = 1103515245;
+    const c = 12345;
+    let state = seed ? seed : Math.floor(Math.random() * (m - 1));
+    return function () {
+        state = (a * state + c) % m;
+        return state / (m - 1);
+    }
+}
+
+function stringToSeed(str: string) {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+}
+
+function shuffle<T>(array: T[], seed: number): T[] {
+    const rng = seededRandom(seed);
+    let m = array.length, t, i;
+    const newArray = [...array];
+    while (m) {
+        i = Math.floor(rng() * m--);
+        t = newArray[m];
+        newArray[m] = newArray[i];
+        newArray[i] = t;
+    }
+    return newArray;
+}
+
 export interface AppState {
     expertId: string;
     currentImageIndex: number;
     answers: Record<string, Record<string, any>>;
-    imageSequence: string[]; // History of visited image IDs
+    imageSequence: string[]; // Fixed random order for this user
+    completedImages: string[]; // List of IDs that are finished
 }
 
-const INITIAL_STATE: AppState = {
-    expertId: '',
-    currentImageIndex: 0,
-    answers: {},
-    imageSequence: [],
+const getInitialState = (): AppState => {
+    // Initial state just has a placeholder or empty, actual init happens after auth
+    return {
+        expertId: '',
+        currentImageIndex: 0,
+        answers: {},
+        imageSequence: [],
+        completedImages: [],
+    };
 };
 
 export function useStore() {
-    const [state, setState] = useState<AppState>(INITIAL_STATE);
+    const [state, setState] = useState<AppState>(getInitialState);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [session, setSession] = useState<any>(null);
 
-    // Load from local storage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                // Ensure imageSequence exists (migration for existing users)
-                if (!parsed.imageSequence || parsed.imageSequence.length === 0) {
-                    const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
-                    parsed.imageSequence = [randomId];
-                    parsed.currentImageIndex = 0;
-                }
-                setState(parsed);
-            } catch (e) {
-                console.error("Failed to parse local storage", e);
-                // Fallback init if parse fails
-                const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
-                setState({ ...INITIAL_STATE, imageSequence: [randomId] });
+    // Helper to check if 1/3 of questions are answered
+    function checkCompletion(answers: Record<string, any>): boolean {
+        const answerableQuestions = questions.filter(q => q.type !== 'info');
+        const total = answerableQuestions.length;
+        const threshold = Math.ceil(total / 3);
+
+        let answeredCount = 0;
+        answerableQuestions.forEach(q => {
+            const val = answers[q.id];
+            if (Array.isArray(val) && val.length > 0) {
+                answeredCount++;
+            } else if (typeof val === 'string' && val.trim() !== '') {
+                answeredCount++;
+            } else if (typeof val === 'number') {
+                answeredCount++; // Slider?
             }
-        } else {
-            // First time load
-            const randomId = IMAGES[Math.floor(Math.random() * IMAGES.length)].id;
-            setState({ ...INITIAL_STATE, imageSequence: [randomId] });
-        }
-        setIsLoaded(true);
+        });
+
+        return answeredCount >= threshold;
+    }
+
+    // Initialize Auth and State
+    useEffect(() => {
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            setIsLoaded(true);
+        });
+
+        // Listen for auth changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    // Save to local storage on change
+    // Load history when session is available
     useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        }
-    }, [state, isLoaded]);
+        if (!session?.user?.id) return;
+
+        const initUserSession = async () => {
+            try {
+                // 1. Generate Deterministic Sequence
+                const seed = stringToSeed(session.user.id);
+                // Shuffle the IMAGES array to get a list of image objects, then map to IDs
+                const shuffledImages = shuffle(IMAGES, seed);
+                const sequenceIds = shuffledImages.map(img => img.id);
+
+                // 2. Fetch ALL Data to Validate Completion Status
+                const { data, error } = await supabase
+                    .from('bewertungen')
+                    .select('*')
+                    .eq('user_id', session.user.id);
+
+                if (error) {
+                    console.error('Error loading history:', error);
+                }
+
+                // Filter for completed images based on 1/3 rule
+                const completedIds = data?.filter(row => checkCompletion(row)).map(row => row.image_id) || [];
+
+                // 3. Determine Start Index (First incomplete image)
+                let startIndex = 0;
+                // Find the first ID in the sequence that is NOT in completedIds
+                const firstIncompleteIndex = sequenceIds.findIndex(id => !completedIds.includes(id));
+
+                if (firstIncompleteIndex !== -1) {
+                    startIndex = firstIncompleteIndex;
+                } else if (completedIds.length === TOTAL_IMAGES && TOTAL_IMAGES > 0) {
+                    // All done, start at 0
+                    startIndex = 0;
+                }
+
+                setState(prev => ({
+                    ...prev,
+                    imageSequence: sequenceIds,
+                    completedImages: completedIds,
+                    currentImageIndex: startIndex
+                }));
+
+            } catch (err) {
+                console.error("Failed to init user session", err);
+            }
+        };
+
+        initUserSession();
+    }, [session?.user?.id]);
 
     const setExpertId = (id: string) => {
-        setState(prev => ({ ...prev, expertId: id }));
+        // Deprecated
     };
 
-    const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id;
+    const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id; // Fallback only if sequence empty
     // Find image object by ID
     const currentImage = IMAGES.find(img => img.id === currentImageId) || IMAGES[0];
+
+    // Load assessment data when image changes or session changes
+    useEffect(() => {
+        if (!session?.user?.id || !currentImageId) return;
+
+        const loadData = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('bewertungen')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .eq('image_id', currentImageId)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows found"
+                    console.error('Error loading data:', error);
+                }
+
+                if (data) {
+                    // Map flat columns back to answers object
+                    const loadedAnswers: Record<string, any> = {};
+                    questions.forEach(q => {
+                        if (data[q.id] !== undefined && data[q.id] !== null) {
+                            loadedAnswers[q.id] = data[q.id];
+                        }
+                    });
+
+                    setState(prev => ({
+                        ...prev,
+                        answers: {
+                            ...prev.answers,
+                            [currentImageId]: loadedAnswers
+                        }
+                    }));
+                }
+            } catch (err) {
+                console.error('Failed to load assessment', err);
+            }
+        };
+
+        loadData();
+    }, [currentImageId, session?.user?.id]);
+
 
     const setAnswer = (questionId: string, value: any) => {
         setState(prev => ({
@@ -88,68 +231,93 @@ export function useStore() {
     };
 
     const currentAnswers = state.answers[currentImageId] || {};
-    const isLastImage = state.imageSequence.length >= TOTAL_IMAGES && state.currentImageIndex === TOTAL_IMAGES - 1;
+    const isLastImage = state.currentImageIndex === TOTAL_IMAGES - 1;
 
-    const nextImage = async () => {
-        if (!state.expertId) {
-            alert("Bitte geben Sie zuerst Ihre Experten-ID ein.");
-            return;
-        }
+    const saveCurrentAssessment = async () => {
+        if (!session?.user?.id) return false;
 
         setIsSyncing(true);
-
-        // Sync current image data to Supabase
         try {
-            const payload = {
-                expert_id: state.expertId,
+            const payload: Record<string, any> = {
+                user_id: session.user.id,
                 image_id: currentImageId,
-                data: currentAnswers,
-                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             };
 
-            const { error } = await supabase.from('responses').insert([payload]);
+            questions.forEach(q => {
+                if (currentAnswers.hasOwnProperty(q.id)) {
+                    payload[q.id] = currentAnswers[q.id];
+                }
+            });
+
+            const { error } = await supabase
+                .from('bewertungen')
+                .upsert(payload, { onConflict: 'user_id, image_id' });
 
             if (error) {
-                console.error('Supabase sync error:', error);
-                alert('Fehler beim Speichern in die Datenbank. Daten wurden nur lokal gespeichert.');
+                console.error('Supabase save error:', error);
+                alert('Fehler beim Speichern.');
+                return false;
             }
+
+            // Check completion Logic
+            const isComplete = checkCompletion(currentAnswers);
+
+            setState(prev => {
+                const newCompleted = new Set(prev.completedImages);
+                if (isComplete) {
+                    newCompleted.add(currentImageId);
+                } else {
+                    newCompleted.delete(currentImageId);
+                }
+                return {
+                    ...prev,
+                    completedImages: Array.from(newCompleted)
+                };
+            });
+
+            return true;
         } catch (err) {
-            console.error('Sync failed', err);
+            console.error('Save failed', err);
+            return false;
         } finally {
             setIsSyncing(false);
         }
+    };
+
+    const nextImage = async () => {
+        if (!session?.user?.id) {
+            alert("Bitte melden Sie sich an.");
+            return;
+        }
+
+        const success = await saveCurrentAssessment();
+        if (!success) return;
 
         // Logic for next image
         setState(prev => {
-            // If we are navigating history (not at the end)
             if (prev.currentImageIndex < prev.imageSequence.length - 1) {
                 return { ...prev, currentImageIndex: prev.currentImageIndex + 1 };
-            }
-
-            // We are at the end, pick a NEW random image
-            // 1. Get all used IDs
-            const usedIds = new Set(prev.imageSequence);
-            // 2. Find available IDs
-            const available = IMAGES.filter(img => !usedIds.has(img.id));
-
-            if (available.length === 0) {
-                // Should be caught by isLastImage check before calling next, but handled here
-                alert("Alle Wunden bearbeitet! Danke.");
+            } else {
+                alert("Alle Bilder in der Liste erreicht!");
                 return prev;
             }
-
-            // 3. Pick random
-            const randomImg = available[Math.floor(Math.random() * available.length)];
-
-            return {
-                ...prev,
-                imageSequence: [...prev.imageSequence, randomImg.id],
-                currentImageIndex: prev.currentImageIndex + 1
-            };
         });
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
+    const skipImage = () => {
+        setState(prev => {
+            if (prev.currentImageIndex < prev.imageSequence.length - 1) {
+                return { ...prev, currentImageIndex: prev.currentImageIndex + 1 };
+            } else {
+                alert("Keine weiteren Bilder.");
+                return prev;
+            }
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     const prevImage = () => {
         if (state.currentImageIndex > 0) {
@@ -157,30 +325,38 @@ export function useStore() {
         }
     };
 
-    const exportData = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.answers, null, 2));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `wundbewertung_export_${state.expertId}_${new Date().toISOString()}.json`);
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+    const jumpToImage = (index: number) => {
+        if (index >= 0 && index < state.imageSequence.length) {
+            setState(prev => ({ ...prev, currentImageIndex: index }));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
+    const signOut = async () => {
+        await supabase.auth.signOut();
+        setState(getInitialState());
+    };
+
+    const exportData = () => {
+        alert("Export funktion ist in dieser Version deaktiviert. Daten sind in Supabase gespeichert.");
+    };
 
     return {
         state,
-
         setExpertId,
         setAnswer,
         nextImage,
         prevImage,
+        skipImage,
+        jumpToImage,
         currentImage,
         currentAnswers,
         isLastImage,
         isSyncing,
         exportData,
         isLoaded,
-        TRAINING_IMAGES: IMAGES
+        TRAINING_IMAGES: IMAGES,
+        session,
+        signOut
     };
 }
