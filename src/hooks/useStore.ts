@@ -127,6 +127,13 @@ export function useStore() {
                 const shuffledImages = shuffle(IMAGES, seed);
                 const sequenceIds = shuffledImages.map(img => img.id);
 
+                // Load local index
+                const localIndex = parseInt(localStorage.getItem(`wund_index_${session.user.id}`) || '0', 10);
+
+                // Load local answers
+                const localAnswersKey = `wund_answers_${session.user.id}`;
+                const localAnswers = JSON.parse(localStorage.getItem(localAnswersKey) || '{}');
+
                 // 2. Fetch ALL Data to Validate Completion Status
                 const { data, error } = await supabase
                     .from('bewertungen')
@@ -137,26 +144,66 @@ export function useStore() {
                     console.error('Error loading history:', error);
                 }
 
-                // Filter for completed images based on 1/3 rule
-                const completedIds = data?.filter(row => checkCompletion(row)).map(row => row.image_id) || [];
+                // Merge DB data with Local Data (Local wins for un-synced changes, DB for structure)
+                // Actually for now: Use DB as base, override with local if exists? 
+                // Better: Just use local for now if we want "offline" cap.
+                // But we need to know what is completed.
 
-                // 3. Determine Start Index (First incomplete image)
+                // Construct answers map from DB
+                const dbAnswers: Record<string, any> = {};
+                if (data) {
+                    data.forEach(row => {
+                        const imgAnswers: Record<string, any> = {};
+                        questions.forEach(q => {
+                            if (row[q.id] !== undefined && row[q.id] !== null) {
+                                imgAnswers[q.id] = row[q.id];
+                            }
+                        });
+                        dbAnswers[row.image_id] = imgAnswers;
+                    });
+                }
+
+                // Merge strategies:
+                // DB Priority: If DB has data for an image, use it! Ignore local.
+                // If DB has NO data for an image, check local.
+                const mergedAnswers = { ...dbAnswers }; // Start with DB
+
+                Object.keys(localAnswers).forEach(imgId => {
+                    // Only use local if DB has no entry for this image OR DB entry is empty keys
+                    const dbHasEntry = dbAnswers[imgId] && Object.keys(dbAnswers[imgId]).length > 0;
+                    if (!dbHasEntry) {
+                        mergedAnswers[imgId] = localAnswers[imgId];
+                    }
+                });
+
+
+                // Filter for completed images based on 1/3 rule using MERGED answers
+                const completedIds = sequenceIds.filter(id => {
+                    const ans = mergedAnswers[id] || {};
+                    return checkCompletion(ans);
+                });
+
+
+                // 3. Determine Start Index 
+                // If we have a stored local index, prefer that!
+                // But ensure it's valid
                 let startIndex = 0;
-                // Find the first ID in the sequence that is NOT in completedIds
-                const firstIncompleteIndex = sequenceIds.findIndex(id => !completedIds.includes(id));
-
-                if (firstIncompleteIndex !== -1) {
-                    startIndex = firstIncompleteIndex;
-                } else if (completedIds.length === TOTAL_IMAGES && TOTAL_IMAGES > 0) {
-                    // All done, start at 0
-                    startIndex = 0;
+                if (!isNaN(localIndex) && localIndex >= 0 && localIndex < TOTAL_IMAGES) {
+                    startIndex = localIndex;
+                } else {
+                    // Fallback to first incomplete
+                    const firstIncompleteIndex = sequenceIds.findIndex(id => !completedIds.includes(id));
+                    if (firstIncompleteIndex !== -1) {
+                        startIndex = firstIncompleteIndex;
+                    }
                 }
 
                 setState(prev => ({
                     ...prev,
                     imageSequence: sequenceIds,
                     completedImages: completedIds,
-                    currentImageIndex: startIndex
+                    currentImageIndex: startIndex,
+                    answers: mergedAnswers
                 }));
 
             } catch (err) {
@@ -173,60 +220,38 @@ export function useStore() {
     // Find image object by ID
     const currentImage = IMAGES.find(img => img.id === currentImageId) || IMAGES[0];
 
-    // Load assessment data when image changes or session changes
+    // Load assessment data when image changes or session changes - REMOVED, WE LOAD ALL AT START
+    /*
     useEffect(() => {
         if (!session?.user?.id || !currentImageId) return;
-
-        const loadData = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('bewertungen')
-                    .select('*')
-                    .eq('user_id', session.user.id)
-                    .eq('image_id', currentImageId)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows found"
-                    console.error('Error loading data:', error);
-                }
-
-                if (data) {
-                    // Map flat columns back to answers object
-                    const loadedAnswers: Record<string, any> = {};
-                    questions.forEach(q => {
-                        if (data[q.id] !== undefined && data[q.id] !== null) {
-                            loadedAnswers[q.id] = data[q.id];
-                        }
-                    });
-
-                    setState(prev => ({
-                        ...prev,
-                        answers: {
-                            ...prev.answers,
-                            [currentImageId]: loadedAnswers
-                        }
-                    }));
-                }
-            } catch (err) {
-                console.error('Failed to load assessment', err);
-            }
-        };
-
-        loadData();
+        // Logic moved to main init to allow merging
     }, [currentImageId, session?.user?.id]);
+    */
 
 
     const setAnswer = (questionId: string, value: any) => {
-        setState(prev => ({
-            ...prev,
-            answers: {
+        setState(prev => {
+            const newAnswers = {
                 ...prev.answers,
                 [currentImageId]: {
                     ...(prev.answers[currentImageId] || {}),
                     [questionId]: value
                 }
+            };
+
+            // Save to localStorage
+            if (session?.user?.id) {
+                const key = `wund_answers_${session.user.id}`;
+                const stored = JSON.parse(localStorage.getItem(key) || '{}');
+                stored[currentImageId] = newAnswers[currentImageId];
+                localStorage.setItem(key, JSON.stringify(stored));
             }
-        }));
+
+            return {
+                ...prev,
+                answers: newAnswers
+            };
+        });
     };
 
     const currentAnswers = state.answers[currentImageId] || {};
@@ -295,7 +320,15 @@ export function useStore() {
 
         // Logic for next image
         if (state.currentImageIndex < state.imageSequence.length - 1) {
-            setState(prev => ({ ...prev, currentImageIndex: prev.currentImageIndex + 1 }));
+            const nextIndex = state.currentImageIndex + 1;
+            setState(prev => {
+                const newState = { ...prev, currentImageIndex: nextIndex };
+                // Save index specific to this user/sequence
+                if (session?.user?.id) {
+                    localStorage.setItem(`wund_index_${session.user.id}`, String(nextIndex));
+                }
+                return newState;
+            });
         } else {
             // Check if ALL images are completed
             // We need to check against the updated state or completedImages + current if just finished
@@ -321,26 +354,27 @@ export function useStore() {
     };
 
     const skipImage = () => {
-        setState(prev => {
-            if (prev.currentImageIndex < prev.imageSequence.length - 1) {
-                return { ...prev, currentImageIndex: prev.currentImageIndex + 1 };
-            } else {
-                alert("Keine weiteren Bilder.");
-                return prev;
-            }
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Removed
     }
 
     const prevImage = () => {
         if (state.currentImageIndex > 0) {
-            setState(prev => ({ ...prev, currentImageIndex: prev.currentImageIndex - 1 }));
+            const prevIndex = state.currentImageIndex - 1;
+            setState(prev => {
+                if (session?.user?.id) {
+                    localStorage.setItem(`wund_index_${session.user.id}`, String(prevIndex));
+                }
+                return { ...prev, currentImageIndex: prevIndex };
+            });
         }
     };
 
     const jumpToImage = async (index: number) => {
         if (index >= 0 && index < state.imageSequence.length) {
             await saveCurrentAssessment();
+            if (session?.user?.id) {
+                localStorage.setItem(`wund_index_${session.user.id}`, String(index));
+            }
             setState(prev => ({ ...prev, currentImageIndex: index }));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
