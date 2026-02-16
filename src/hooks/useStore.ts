@@ -73,6 +73,7 @@ export function useStore() {
     const [state, setState] = useState<AppState>(getInitialState);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isFinished, setIsFinished] = useState(false);
     const [session, setSession] = useState<any>(null);
 
     // Helper to check if 1/3 of questions are answered
@@ -293,14 +294,28 @@ export function useStore() {
         if (!success) return;
 
         // Logic for next image
-        setState(prev => {
-            if (prev.currentImageIndex < prev.imageSequence.length - 1) {
-                return { ...prev, currentImageIndex: prev.currentImageIndex + 1 };
-            } else {
-                alert("Alle Bilder in der Liste erreicht!");
-                return prev;
+        if (state.currentImageIndex < state.imageSequence.length - 1) {
+            setState(prev => ({ ...prev, currentImageIndex: prev.currentImageIndex + 1 }));
+        } else {
+            // Check if ALL images are completed
+            // We need to check against the updated state or completedImages + current if just finished
+            // Since setState is async, we'll calc new completed locally
+            let currentCompletedCount = state.completedImages.length;
+            const isCurrentNowComplete = checkCompletion(currentAnswers);
+            const wasAlreadyComplete = state.completedImages.includes(currentImageId);
+
+            if (isCurrentNowComplete && !wasAlreadyComplete) {
+                currentCompletedCount++;
+            } else if (!isCurrentNowComplete && wasAlreadyComplete) {
+                currentCompletedCount--;
             }
-        });
+
+            if (currentCompletedCount === TOTAL_IMAGES) {
+                setIsFinished(true);
+            } else {
+                alert(`Bitte bearbeiten Sie alle Bilder vollständig vor dem Abschluss.\nAktuell: ${currentCompletedCount} / ${TOTAL_IMAGES} fertig.`);
+            }
+        }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -323,8 +338,9 @@ export function useStore() {
         }
     };
 
-    const jumpToImage = (index: number) => {
+    const jumpToImage = async (index: number) => {
         if (index >= 0 && index < state.imageSequence.length) {
+            await saveCurrentAssessment();
             setState(prev => ({ ...prev, currentImageIndex: index }));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -355,6 +371,7 @@ export function useStore() {
         isLoaded,
         TRAINING_IMAGES: IMAGES,
         session,
+        isFinished,
         signOut
     };
 }
