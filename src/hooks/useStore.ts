@@ -4,7 +4,6 @@ import { questions } from '../lib/questions';
 
 const TOTAL_IMAGES = 60;
 
-
 // Generate image list: wunde_01.jpg ... wunde_60.jpg
 const IMAGES = Array.from({ length: TOTAL_IMAGES }, (_, i) => {
     const num = String(i + 1).padStart(2, '0');
@@ -76,27 +75,6 @@ export function useStore() {
     const [isFinished, setIsFinished] = useState(false);
     const [session, setSession] = useState<any>(null);
 
-    // Helper to check if 1/3 of questions are answered
-    function checkCompletion(answers: Record<string, any>): boolean {
-        const answerableQuestions = questions.filter(q => q.type !== 'info');
-        const total = answerableQuestions.length;
-        const threshold = Math.ceil(total / 3);
-
-        let answeredCount = 0;
-        answerableQuestions.forEach(q => {
-            const val = answers[q.id];
-            if (Array.isArray(val) && val.length > 0) {
-                answeredCount++;
-            } else if (typeof val === 'string' && val.trim() !== '') {
-                answeredCount++;
-            } else if (typeof val === 'number') {
-                answeredCount++; // Slider?
-            }
-        });
-
-        return answeredCount >= threshold;
-    }
-
     // Initialize Auth and State
     useEffect(() => {
         // Get initial session
@@ -123,18 +101,10 @@ export function useStore() {
             try {
                 // 1. Generate Deterministic Sequence
                 const seed = stringToSeed(session.user.id);
-                // Shuffle the IMAGES array to get a list of image objects, then map to IDs
                 const shuffledImages = shuffle(IMAGES, seed);
                 const sequenceIds = shuffledImages.map(img => img.id);
 
-                // Load local index
-                const localIndex = parseInt(localStorage.getItem(`wund_index_${session.user.id}`) || '0', 10);
-
-                // Load local answers
-                const localAnswersKey = `wund_answers_${session.user.id}`;
-                const localAnswers = JSON.parse(localStorage.getItem(localAnswersKey) || '{}');
-
-                // 2. Fetch ALL Data to Validate Completion Status
+                // 2. Fetch ALL Data directly from Supabase
                 const { data, error } = await supabase
                     .from('bewertungen')
                     .select('*')
@@ -144,13 +114,9 @@ export function useStore() {
                     console.error('Error loading history:', error);
                 }
 
-                // Merge DB data with Local Data (Local wins for un-synced changes, DB for structure)
-                // Actually for now: Use DB as base, override with local if exists? 
-                // Better: Just use local for now if we want "offline" cap.
-                // But we need to know what is completed.
-
-                // Construct answers map from DB
                 const dbAnswers: Record<string, any> = {};
+                const completedIds: string[] = [];
+
                 if (data) {
                     data.forEach(row => {
                         const imgAnswers: Record<string, any> = {};
@@ -160,42 +126,19 @@ export function useStore() {
                             }
                         });
                         dbAnswers[row.image_id] = imgAnswers;
+
+                        if (row.ist_fertig === true) {
+                            completedIds.push(row.image_id);
+                        }
                     });
                 }
 
-                // Merge strategies:
-                // DB Priority: If DB has data for an image, use it! Ignore local.
-                // If DB has NO data for an image, check local.
-                const mergedAnswers = { ...dbAnswers }; // Start with DB
-
-                Object.keys(localAnswers).forEach(imgId => {
-                    // Only use local if DB has no entry for this image OR DB entry is empty keys
-                    const dbHasEntry = dbAnswers[imgId] && Object.keys(dbAnswers[imgId]).length > 0;
-                    if (!dbHasEntry) {
-                        mergedAnswers[imgId] = localAnswers[imgId];
-                    }
-                });
-
-
-                // Filter for completed images based on 1/3 rule using MERGED answers
-                const completedIds = sequenceIds.filter(id => {
-                    const ans = mergedAnswers[id] || {};
-                    return checkCompletion(ans);
-                });
-
-
                 // 3. Determine Start Index 
-                // If we have a stored local index, prefer that!
-                // But ensure it's valid
+                // First incomplete image in the sequence
                 let startIndex = 0;
-                if (!isNaN(localIndex) && localIndex >= 0 && localIndex < TOTAL_IMAGES) {
-                    startIndex = localIndex;
-                } else {
-                    // Fallback to first incomplete
-                    const firstIncompleteIndex = sequenceIds.findIndex(id => !completedIds.includes(id));
-                    if (firstIncompleteIndex !== -1) {
-                        startIndex = firstIncompleteIndex;
-                    }
+                const firstIncompleteIndex = sequenceIds.findIndex(id => !completedIds.includes(id));
+                if (firstIncompleteIndex !== -1) {
+                    startIndex = firstIncompleteIndex;
                 }
 
                 setState(prev => ({
@@ -203,7 +146,7 @@ export function useStore() {
                     imageSequence: sequenceIds,
                     completedImages: completedIds,
                     currentImageIndex: startIndex,
-                    answers: mergedAnswers
+                    answers: dbAnswers
                 }));
 
             } catch (err) {
@@ -216,36 +159,58 @@ export function useStore() {
 
 
 
-    const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id; // Fallback only if sequence empty
-    // Find image object by ID
+    const currentImageId = state.imageSequence[state.currentImageIndex] || IMAGES[0].id;
     const currentImage = IMAGES.find(img => img.id === currentImageId) || IMAGES[0];
 
-    // Load assessment data when image changes or session changes - REMOVED, WE LOAD ALL AT START
-    /*
-    useEffect(() => {
-        if (!session?.user?.id || !currentImageId) return;
-        // Logic moved to main init to allow merging
-    }, [currentImageId, session?.user?.id]);
-    */
+    const autosaveToSupabase = async (imageId: string, newAnswers: Record<string, any>) => {
+        if (!session?.user?.id) return;
+
+        try {
+            const payload: Record<string, any> = {
+                user_id: session.user.id,
+                image_id: imageId,
+                updated_at: new Date().toISOString(),
+                // Keep the ist_fertig flag unchanged during autosave if it's already true, or false otherwise
+            };
+
+            // Merge current image completed status into payload manually to avoid overriding explicitly
+            const isAlreadyCompleted = state.completedImages.includes(imageId);
+            payload['ist_fertig'] = isAlreadyCompleted;
+
+            questions.forEach(q => {
+                if (newAnswers.hasOwnProperty(q.id)) {
+                    payload[q.id] = newAnswers[q.id];
+                }
+            });
+
+            const { error } = await supabase
+                .from('bewertungen')
+                .upsert(payload, { onConflict: 'user_id, image_id' });
+
+            if (error) {
+                console.error('Supabase autosave error:', error);
+            }
+        } catch (err) {
+            console.error('Autosave failed:', err);
+        }
+    };
 
 
     const setAnswer = (questionId: string, value: any) => {
         setState(prev => {
-            const newAnswers = {
-                ...prev.answers,
-                [currentImageId]: {
-                    ...(prev.answers[currentImageId] || {}),
-                    [questionId]: value
-                }
+            const currentAnswersForImage = prev.answers[currentImageId] || {};
+            const newImageAnswers = {
+                ...currentAnswersForImage,
+                [questionId]: value
             };
 
-            // Save to localStorage
-            if (session?.user?.id) {
-                const key = `wund_answers_${session.user.id}`;
-                const stored = JSON.parse(localStorage.getItem(key) || '{}');
-                stored[currentImageId] = newAnswers[currentImageId];
-                localStorage.setItem(key, JSON.stringify(stored));
-            }
+            const newAnswers = {
+                ...prev.answers,
+                [currentImageId]: newImageAnswers
+            };
+
+            // Trigger autosave in background without awaiting (optimistic UI update)
+            autosaveToSupabase(currentImageId, newImageAnswers);
 
             return {
                 ...prev,
@@ -257,20 +222,22 @@ export function useStore() {
     const currentAnswers = state.answers[currentImageId] || {};
     const isLastImage = state.currentImageIndex === TOTAL_IMAGES - 1;
 
-    const saveCurrentAssessment = async () => {
+    // Save with explicit ist_fertig = true
+    const markImageAsCompleted = async (imageId: string, answers: Record<string, any>) => {
         if (!session?.user?.id) return false;
 
         setIsSyncing(true);
         try {
             const payload: Record<string, any> = {
                 user_id: session.user.id,
-                image_id: currentImageId,
+                image_id: imageId,
                 updated_at: new Date().toISOString(),
+                ist_fertig: true
             };
 
             questions.forEach(q => {
-                if (currentAnswers.hasOwnProperty(q.id)) {
-                    payload[q.id] = currentAnswers[q.id];
+                if (answers.hasOwnProperty(q.id)) {
+                    payload[q.id] = answers[q.id];
                 }
             });
 
@@ -279,21 +246,14 @@ export function useStore() {
                 .upsert(payload, { onConflict: 'user_id, image_id' });
 
             if (error) {
-                console.error('Supabase save error:', error);
-                alert('Fehler beim Speichern.');
+                console.error('Supabase final save error:', error);
+                alert('Fehler beim Speichern des Abschluss-Status.');
                 return false;
             }
 
-            // Check completion Logic
-            const isComplete = checkCompletion(currentAnswers);
-
             setState(prev => {
                 const newCompleted = new Set(prev.completedImages);
-                if (isComplete) {
-                    newCompleted.add(currentImageId);
-                } else {
-                    newCompleted.delete(currentImageId);
-                }
+                newCompleted.add(imageId);
                 return {
                     ...prev,
                     completedImages: Array.from(newCompleted)
@@ -302,7 +262,7 @@ export function useStore() {
 
             return true;
         } catch (err) {
-            console.error('Save failed', err);
+            console.error('Final Save failed', err);
             return false;
         } finally {
             setIsSyncing(false);
@@ -315,38 +275,23 @@ export function useStore() {
             return;
         }
 
-        const success = await saveCurrentAssessment();
+        const success = await markImageAsCompleted(currentImageId, currentAnswers);
         if (!success) return;
 
-        // Logic for next image
         if (state.currentImageIndex < state.imageSequence.length - 1) {
             const nextIndex = state.currentImageIndex + 1;
-            setState(prev => {
-                const newState = { ...prev, currentImageIndex: nextIndex };
-                // Save index specific to this user/sequence
-                if (session?.user?.id) {
-                    localStorage.setItem(`wund_index_${session.user.id}`, String(nextIndex));
-                }
-                return newState;
-            });
+            setState(prev => ({ ...prev, currentImageIndex: nextIndex }));
         } else {
             // Check if ALL images are completed
-            // We need to check against the updated state or completedImages + current if just finished
-            // Since setState is async, we'll calc new completed locally
             let currentCompletedCount = state.completedImages.length;
-            const isCurrentNowComplete = checkCompletion(currentAnswers);
-            const wasAlreadyComplete = state.completedImages.includes(currentImageId);
-
-            if (isCurrentNowComplete && !wasAlreadyComplete) {
-                currentCompletedCount++;
-            } else if (!isCurrentNowComplete && wasAlreadyComplete) {
-                currentCompletedCount--;
+            if (!state.completedImages.includes(currentImageId)) {
+                currentCompletedCount++; // optimistically add current if newly completed
             }
 
-            if (currentCompletedCount === TOTAL_IMAGES) {
+            if (currentCompletedCount >= TOTAL_IMAGES) {
                 setIsFinished(true);
             } else {
-                alert(`Bitte bearbeiten Sie alle Bilder vollständig vor dem Abschluss.\nAktuell: ${currentCompletedCount} / ${TOTAL_IMAGES} fertig.`);
+                alert(`Bitte bearbeiten Sie alle Bilder.\nAktuell: ${currentCompletedCount} / ${TOTAL_IMAGES} fertig.`);
             }
         }
 
@@ -360,21 +305,13 @@ export function useStore() {
     const prevImage = () => {
         if (state.currentImageIndex > 0) {
             const prevIndex = state.currentImageIndex - 1;
-            setState(prev => {
-                if (session?.user?.id) {
-                    localStorage.setItem(`wund_index_${session.user.id}`, String(prevIndex));
-                }
-                return { ...prev, currentImageIndex: prevIndex };
-            });
+            setState(prev => ({ ...prev, currentImageIndex: prevIndex }));
         }
     };
 
     const jumpToImage = async (index: number) => {
         if (index >= 0 && index < state.imageSequence.length) {
-            await saveCurrentAssessment();
-            if (session?.user?.id) {
-                localStorage.setItem(`wund_index_${session.user.id}`, String(index));
-            }
+            // we do NOT explicitly mark as completed here, autosave handles the answers.
             setState(prev => ({ ...prev, currentImageIndex: index }));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -409,3 +346,4 @@ export function useStore() {
         signOut
     };
 }
+
