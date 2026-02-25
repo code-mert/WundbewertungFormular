@@ -24,6 +24,10 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
                     return null;
                 }
 
+                if (q.id === 'kompression_produkte' && answers['kompression_indiziert'] !== 'Ja') {
+                    return null;
+                }
+
                 if (q.type === 'info') {
                     const hasSubtitle = q.label.includes('\n');
                     const title = q.label.split('\n')[0];

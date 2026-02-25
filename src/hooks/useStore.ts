@@ -49,6 +49,22 @@ function shuffle<T>(array: T[], seed: number): T[] {
     return newArray;
 }
 
+function isImageActuallyComplete(answers: Record<string, any>): boolean {
+    const excludedQuestions = ['einschraenkungen', 'auffaelligkeiten'];
+    const answerableQuestions = questions.filter(q => q.type !== 'info' && !excludedQuestions.includes(q.id));
+    return answerableQuestions.every(q => {
+        if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') return true;
+        if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') return true;
+        if (q.id === 'kompression_produkte' && answers['kompression_indiziert'] !== 'Ja') return true;
+
+        const answer = answers[q.id];
+        if (answer === undefined || answer === null) return false;
+        if (typeof answer === 'string' && answer.trim() === '') return false;
+        if (Array.isArray(answer) && answer.length === 0) return false;
+        return true;
+    });
+}
+
 export interface AppState {
     expertId: string;
     currentImageIndex: number;
@@ -127,7 +143,7 @@ export function useStore() {
                         });
                         dbAnswers[row.image_id] = imgAnswers;
 
-                        if (row.ist_fertig === true) {
+                        if (isImageActuallyComplete(imgAnswers)) {
                             completedIds.push(row.image_id);
                         }
                     });
@@ -228,11 +244,13 @@ export function useStore() {
 
         setIsSyncing(true);
         try {
+            const isComplete = isImageActuallyComplete(answers);
+
             const payload: Record<string, any> = {
                 user_id: session.user.id,
                 image_id: imageId,
                 updated_at: new Date().toISOString(),
-                ist_fertig: true
+                ist_fertig: isComplete
             };
 
             questions.forEach(q => {
@@ -253,7 +271,11 @@ export function useStore() {
 
             setState(prev => {
                 const newCompleted = new Set(prev.completedImages);
-                newCompleted.add(imageId);
+                if (isComplete) {
+                    newCompleted.add(imageId);
+                } else {
+                    newCompleted.delete(imageId);
+                }
                 return {
                     ...prev,
                     completedImages: Array.from(newCompleted)
@@ -284,8 +306,11 @@ export function useStore() {
         } else {
             // Check if ALL images are completed
             let currentCompletedCount = state.completedImages.length;
-            if (!state.completedImages.includes(currentImageId)) {
+            const isCurrentComplete = isImageActuallyComplete(currentAnswers);
+            if (isCurrentComplete && !state.completedImages.includes(currentImageId)) {
                 currentCompletedCount++; // optimistically add current if newly completed
+            } else if (!isCurrentComplete && state.completedImages.includes(currentImageId)) {
+                currentCompletedCount--;
             }
 
             if (currentCompletedCount >= TOTAL_IMAGES) {
