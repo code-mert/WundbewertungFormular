@@ -19,7 +19,7 @@ export function Auth() {
                         <h3 className="font-semibold text-slate-800">Hinweise zur Bearbeitung:</h3>
                         <ul className="list-disc pl-5 space-y-1">
                             <li>
-                                <span className="font-medium">Vollständigkeit:</span> Bitte versuchen Sie, jedes Bild so präzise wie möglich zu beurteilen.
+                                <span className="font-medium">Vollständigkeit:</span> Bitte versuchen Sie, jedes Bild so präzise wie möglich zu beurteilen. Der "Weiter & Speichern" Button färbt sich grün, sobald das Wundbild vollständig bearbeitet wurde.
                             </li>
                             <li>
                                 <span className="font-medium">Zusatzinformationen:</span> Sollten Ihnen wichtige klinische Informationen zur abschließenden Bewertung fehlen, nutzen Sie bitte das dafür vorgesehene Notizfeld am Ende jedes Fragebogens.

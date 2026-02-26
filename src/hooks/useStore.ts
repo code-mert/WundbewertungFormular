@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { questions } from '../lib/questions';
+import { questions, type Question } from '../lib/questions';
 
 const TOTAL_IMAGES = 60;
 
@@ -49,20 +49,23 @@ function shuffle<T>(array: T[], seed: number): T[] {
     return newArray;
 }
 
-function isImageActuallyComplete(answers: Record<string, any>): boolean {
+export function isQuestionAnswered(q: Question, answers: Record<string, any>): boolean {
     const excludedQuestions = ['einschraenkungen', 'auffaelligkeiten'];
-    const answerableQuestions = questions.filter(q => q.type !== 'info' && !excludedQuestions.includes(q.id));
-    return answerableQuestions.every(q => {
-        if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') return true;
-        if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') return true;
-        if (q.id === 'kompression_produkte' && answers['kompression_indiziert'] !== 'Ja') return true;
+    if (q.type === 'info' || excludedQuestions.includes(q.id)) return true;
 
-        const answer = answers[q.id];
-        if (answer === undefined || answer === null) return false;
-        if (typeof answer === 'string' && answer.trim() === '') return false;
-        if (Array.isArray(answer) && answer.length === 0) return false;
-        return true;
-    });
+    if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') return true;
+    if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') return true;
+    if (q.id === 'kompression_produkte' && answers['kompression_indiziert'] !== 'Ja') return true;
+
+    const answer = answers[q.id];
+    if (answer === undefined || answer === null) return false;
+    if (typeof answer === 'string' && answer.trim() === '') return false;
+    if (Array.isArray(answer) && answer.length === 0) return false;
+    return true;
+}
+
+export function isImageActuallyComplete(answers: Record<string, any>): boolean {
+    return questions.every(q => isQuestionAnswered(q, answers));
 }
 
 export interface AppState {
