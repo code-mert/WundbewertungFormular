@@ -5,7 +5,7 @@ import { Header } from './components/Header';
 import { ImageViewer } from './components/ImageViewer';
 import { QuestionForm } from './components/QuestionForm';
 import { Auth } from './components/Auth';
-import { useStore } from './hooks/useStore';
+import { useStore, isImageActuallyComplete } from './hooks/useStore';
 import { getDescription } from './lib/descriptions';
 
 import { ThankYou } from './components/ThankYou';
@@ -52,6 +52,8 @@ function App() {
     setShowConfirmModal(false);
     await nextImage();
   };
+
+  const isCurrentFormValid = isImageActuallyComplete(currentAnswers);
 
   return (
     <>
@@ -111,7 +113,10 @@ function App() {
               <button
                 onClick={handleNextClick}
                 disabled={isSyncing}
-                className="px-8 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all flex items-center gap-2"
+                className={`px-8 py-2 rounded-lg text-white font-bold shadow-lg transition-all flex items-center gap-2 ${isCurrentFormValid
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
+                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                  }`}
               >
                 {isSyncing ? 'Speichert...' : isLastImage ? 'Abschließen' : 'Weiter & Speichern'}
               </button>
