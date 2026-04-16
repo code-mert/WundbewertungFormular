@@ -16,7 +16,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_wundsituation',
         type: 'info',
-        label: 'Kategorie 1: Wundsituation'
+        label: 'Wundsituation\nBitte beschreiben Sie Wundart, Wundzustand, Exsudation, Beläge, mögliche Infektionszeichen sowie die Wundumgebung.'
     },
     {
         id: 'lokalisation',
@@ -93,7 +93,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_wundreinigung',
         type: 'info',
-        label: 'Kategorie 2: Wundreinigung / Débridement'
+        label: 'Wundreinigung / Débridement'
     },
     {
         id: 'debridement_notwendig',
@@ -126,7 +126,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_primaerverband',
         type: 'info',
-        label: 'Kategorie 3: Primärverband (Wundauflage)'
+        label: 'Primärverband (Wundauflage)\nBitte wählen Sie eine aus Ihrer Sicht geeignete primäre Wundauflage basierend auf dem sichtbaren Wundzustand. Die alternative Lösung ist als gleichwertige therapeutische Option zu verstehen.'
     },
     {
         id: 'praeferenz_produkt',
@@ -184,7 +184,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_sekundaerverband',
         type: 'info',
-        label: 'Kategorie 4: Sekundärverband / Fixierung / Hautschutz'
+        label: 'Sekundärverband / Fixierung / Hautschutz\nBitte wählen Sie geeignete ergänzende Produkte (z.B. zur Fixierung) für die Versorgung.'
     },
     {
         id: 'sekundaerverband',
@@ -213,7 +213,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_kompression',
         type: 'info',
-        label: 'Kategorie 5: Kompressionstherapie'
+        label: 'Kompressionstherapie'
     },
     {
         id: 'kompression_indiziert',
@@ -237,7 +237,7 @@ export const questions: Question[] = [
     {
         id: 'kategorie_einschraenkungen',
         type: 'info',
-        label: 'Kategorie 6: Einschränkungen & Annahmen'
+        label: 'Einschränkungen & Annahmen'
     },
     {
         id: 'einschraenkungen',
