@@ -50,11 +50,11 @@ function shuffle<T>(array: T[], seed: number): T[] {
 }
 
 export function isQuestionAnswered(q: Question, answers: Record<string, any>): boolean {
-    const excludedQuestions = ['einschraenkungen', 'auffaelligkeiten'];
+    const excludedQuestions = ['einschraenkungen', 'auffaelligkeiten', 'wundtyp_spezifikation'];
     if (q.type === 'info' || excludedQuestions.includes(q.id)) return true;
 
-    if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') return true;
-    if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') return true;
+    if ((q.id === 'spuelloesung' || q.id === 'debridement') && answers['debridement_notwendig'] !== 'Ja') return true;
+    if (q.id === 'antimikrobielles_agens' && answers['antimikrobiell_notwendig'] !== 'Ja') return true;
     if (q.id === 'kompression_produkte' && answers['kompression_indiziert'] !== 'Ja') return true;
 
     const answer = answers[q.id];
@@ -125,7 +125,7 @@ export function useStore() {
 
                 // 2. Fetch ALL Data directly from Supabase
                 const { data, error } = await supabase
-                    .from('bewertungen')
+                    .from('bewertungen_v2')
                     .select('*')
                     .eq('user_id', session.user.id);
 
@@ -203,7 +203,7 @@ export function useStore() {
             });
 
             const { error } = await supabase
-                .from('bewertungen')
+                .from('bewertungen_v2')
                 .upsert(payload, { onConflict: 'user_id, image_id' });
 
             if (error) {
@@ -263,7 +263,7 @@ export function useStore() {
             });
 
             const { error } = await supabase
-                .from('bewertungen')
+                .from('bewertungen_v2')
                 .upsert(payload, { onConflict: 'user_id, image_id' });
 
             if (error) {

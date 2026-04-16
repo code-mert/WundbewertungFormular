@@ -16,12 +16,12 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
             {questions.map((q, index) => {
                 const value = answers[q.id];
 
-                // Conditional Logic: Hide 'spuelloesung' if 'infektion' is not 'Ja'
-                if (q.id === 'spuelloesung' && answers['infektion'] !== 'Ja') {
+                // Conditional Logic
+                if ((q.id === 'spuelloesung' || q.id === 'debridement') && answers['debridement_notwendig'] !== 'Ja') {
                     return null;
                 }
 
-                if (q.id === 'debridement' && answers['debridement_notwendig'] !== 'Ja') {
+                if (q.id === 'antimikrobielles_agens' && answers['antimikrobiell_notwendig'] !== 'Ja') {
                     return null;
                 }
 
@@ -74,7 +74,7 @@ export function QuestionForm({ answers, onAnswerChange }: Props) {
                             <SliderInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
                         )}
                         {q.type === 'multiselect' && (
-                            <MultiSelectInput question={q} value={value || []} onChange={(v) => onAnswerChange(q.id, v)} />
+                            <MultiSelectInput question={q} value={Array.isArray(value) ? value : (value ? [value] : [])} onChange={(v) => onAnswerChange(q.id, v)} />
                         )}
                         {q.type === 'text' && (
                             <TextInput question={q} value={value} onChange={(v) => onAnswerChange(q.id, v)} />
