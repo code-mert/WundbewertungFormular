@@ -50,13 +50,33 @@ export const questions: Question[] = [
     },
     {
         id: 'wundrand',
-        type: 'text',
-        label: 'Wundrand\n*(z. B. glatt, mazeriert, unterminiert, gerötet)*'
+        type: 'multiselect',
+        label: 'Wundrand',
+        placeholder: 'Wundrand auswählen...',
+        options: [
+            'Reizlos / unauffällig',
+            'Mazeriert',
+            'Hyperkeratotisch',
+            'Unterminiert (Wundtaschen)',
+            'Epibolie (eingerollter Wundrand)',
+            'Gerötet / entzündlich',
+            'Sonstiges'
+        ]
     },
     {
         id: 'wundumgebung',
-        type: 'text',
-        label: 'Wundumgebung\n*(z. B. Rötung, Mazeration, Ödem, Ekzem, Infekt)*'
+        type: 'multiselect',
+        label: 'Wundumgebung',
+        placeholder: 'Wundumgebung auswählen...',
+        options: [
+            'Reizlos / intakt',
+            'Erythem / Rötung',
+            'Mazeration',
+            'Ödem',
+            'Ekzem / Dermatitis',
+            'CVI-typische Hautveränderungen (Hyperpigmentierung, Atrophie blanche, Lipodermatosklerose)',
+            'Sonstiges'
+        ]
     },
     {
         id: 'exsudat',
