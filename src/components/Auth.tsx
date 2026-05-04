@@ -12,7 +12,7 @@ export function Auth() {
                     </h1>
 
                     <p>
-                        Im Rahmen dieses Projekts bitten wir Sie um Ihre fachliche Expertise zur Bewertung von insgesamt 60 verschiedenen Wundbildern. Ziel ist es, für jedes Szenario eine optimale Behandlungsempfehlung basierend auf dem aktuellen Lohmann & Rauscher Produktportfolio zu erstellen.
+                        Im Rahmen dieses Projekts bitten wir Sie um Ihre fachliche Expertise zur Bewertung von insgesamt 60 verschiedenen Wundbildern. Ziel ist es, für jedes Szenario eine optimale Behandlungsempfehlung basierend auf allgemeinen Wundbehandlungsklassen zu erstellen.
                     </p>
 
                     <div className="space-y-2">
